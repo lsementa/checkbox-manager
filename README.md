@@ -4,4 +4,3 @@ A Google Chrome extension for checking or unchecking a large amount of checkboxe
 
 This extension can be installed directly from the [Chrome Web Store](https://chromewebstore.google.com/detail/checkbox-manager/oaobkimgccbhhahoaabdoahpedlaknfc?authuser=0&hl=en-GB).
 
-![screenshot](images/screenshot.jpg)
