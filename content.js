@@ -1,90 +1,99 @@
-// Listen for messages
+function getCheckboxLabel(el) {
+    const ariaLabel = el.getAttribute('aria-label');
+    if (ariaLabel) return ariaLabel.trim();
+
+    const labelledBy = el.getAttribute('aria-labelledby');
+    if (labelledBy) {
+        const text = labelledBy.split(/\s+/)
+            .map(id => document.getElementById(id)?.textContent.trim())
+            .filter(Boolean).join(' ');
+        if (text) return text;
+    }
+
+    if (el.title) return el.title.trim();
+
+    if (el.id) {
+        const forLabel = document.querySelector(`label[for="${el.id}"]`);
+        if (forLabel) return forLabel.textContent.trim();
+    }
+
+    const wrapLabel = el.closest('label');
+    if (wrapLabel) return wrapLabel.textContent.trim();
+
+    let next = el.nextSibling;
+    while (next) {
+        if (next.nodeType === Node.TEXT_NODE && next.textContent.trim()) {
+            return next.textContent.trim();
+        }
+        if (next.nodeType === Node.ELEMENT_NODE) {
+            return next.textContent.trim();
+        }
+        next = next.nextSibling;
+    }
+
+    return el.textContent.trim();
+}
+
+function matchesCriteria(name, { startsWith, contains, doesNotInclude }) {
+    const n = name.toLowerCase();
+    return (
+        (!startsWith || n.startsWith(startsWith.toLowerCase())) &&
+        (!contains || n.includes(contains.toLowerCase())) &&
+        (!doesNotInclude || !n.includes(doesNotInclude.toLowerCase()))
+    );
+}
+
+// Use the native setter so React-controlled inputs pick up the change
+const nativeCheckedSetter = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, 'checked')?.set;
+
+function setNativeCheckbox(el, checked) {
+    if (el.checked === checked) return;
+    if (nativeCheckedSetter) {
+        nativeCheckedSetter.call(el, checked);
+    } else {
+        el.checked = checked;
+    }
+    el.dispatchEvent(new Event('change', { bubbles: true }));
+    el.dispatchEvent(new Event('input', { bubbles: true }));
+}
+
+function setAriaCheckbox(el, checked) {
+    const isChecked = el.getAttribute('aria-checked') === 'true';
+    if (isChecked !== checked) {
+        el.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true }));
+    }
+}
+
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     const { action, data } = message;
-
-    // Check all event
-    if (action === "checkAll") {
-        const { startsWith, contains, doesNotInclude } = data;
-
-        // If empty fields check everything
-        if (!startsWith && !contains && !doesNotInclude) {
-
-            document.querySelectorAll('input[type="checkbox"]').forEach((checkbox) => {
-                // Only process checkboxes that are NOT disabled
-                if (!(checkbox.disabled || checkbox.hasAttribute("disabled"))) {
-                    checkbox.checked = true;
-                }
-            });
-        } else {
-
-            // Each checkbox
-            document.querySelectorAll('input[type="checkbox"]').forEach((checkbox) => {
-                // Get the associated label
-                const label =
-                    checkbox.parentElement.tagName.toLowerCase() === 'label' // Handle wrapping label
-                        ? checkbox.parentElement
-                        : checkbox.nextSibling && checkbox.nextSibling.nodeType === Node.ELEMENT_NODE // Handle sibling label
-                            ? checkbox.nextSibling
-                            : document.querySelector(`label[for="${checkbox.id}"]`); // Handle 'for' attribute
-
-                const name = label ? label.textContent.trim() : '';
-
-                // Only process checkboxes that are NOT disabled
-                if (!(checkbox.disabled || checkbox.hasAttribute("disabled"))) {
-                    if (
-                        name &&
-                        (!startsWith || name.toLowerCase().startsWith(startsWith.toLowerCase())) &&
-                        (!contains || name.toLowerCase().includes(contains.toLowerCase())) &&
-                        (!doesNotInclude || !name.toLowerCase().includes(doesNotInclude.toLowerCase()))
-                    ) {
-                        checkbox.checked = true;
-                    }
-                }
-            });
-        }
+    if (action !== 'checkAll' && action !== 'uncheckAll') {
+        sendResponse({ status: 'unknown' });
+        return;
     }
 
-    // Uncheck all event
-    if (action === "uncheckAll") {
-        const { startsWith, contains, doesNotInclude } = data;
+    const checked = action === 'checkAll';
+    const hasFilter = data.startsWith || data.contains || data.doesNotInclude;
 
-        // If empty fields uncheck everything
-        if (!startsWith && !contains && !doesNotInclude) {
-            document.querySelectorAll('input[type="checkbox"]').forEach((checkbox) => {
-                // Only process checkboxes that are NOT disabled
-                if (!(checkbox.disabled || checkbox.hasAttribute("disabled"))) {
-                    checkbox.checked = false;
-                }
-            });
-        } else {
-            // Each checkbox
-            document.querySelectorAll('input[type="checkbox"]').forEach((checkbox) => {
-                // Get the associated label
-                const label =
-                    checkbox.parentElement.tagName.toLowerCase() === 'label' // Handle wrapping label
-                        ? checkbox.parentElement
-                        : checkbox.nextSibling && checkbox.nextSibling.nodeType === Node.ELEMENT_NODE // Handle sibling label
-                            ? checkbox.nextSibling
-                            : document.querySelector(`label[for="${checkbox.id}"]`); // Handle 'for' attribute
-
-                const name = label ? label.textContent.trim() : '';
-
-                // Only process checkboxes that are NOT disabled
-                if (!(checkbox.disabled || checkbox.hasAttribute("disabled"))) {
-                    if (
-                        name &&
-                        (!startsWith || name.toLowerCase().startsWith(startsWith.toLowerCase())) &&
-                        (!contains || name.toLowerCase().includes(contains.toLowerCase())) &&
-                        (!doesNotInclude || !name.toLowerCase().includes(doesNotInclude.toLowerCase()))
-                    ) {
-                        checkbox.checked = false;
-                    }
-                }
-            });
+    // Native checkboxes (handles plain HTML and custom-styled ones from MUI, Ant Design, etc.)
+    document.querySelectorAll('input[type="checkbox"]').forEach((el) => {
+        if (el.disabled || el.hasAttribute('disabled')) return;
+        if (hasFilter) {
+            const name = getCheckboxLabel(el);
+            if (!name || !matchesCriteria(name, data)) return;
         }
-    }
-    
-    sendResponse({ status: "success" });
+        setNativeCheckbox(el, checked);
+    });
+
+    // ARIA checkboxes and toggle switches (custom components, headless UI, etc.)
+    document.querySelectorAll('[role="checkbox"], [role="switch"]').forEach((el) => {
+        if (el.tagName.toLowerCase() === 'input') return; // already handled above
+        if (el.getAttribute('aria-disabled') === 'true') return;
+        if (hasFilter) {
+            const name = getCheckboxLabel(el);
+            if (!name || !matchesCriteria(name, data)) return;
+        }
+        setAriaCheckbox(el, checked);
+    });
+
+    sendResponse({ status: 'success' });
 });
-
-

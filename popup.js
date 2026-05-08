@@ -1,3 +1,16 @@
+function flashButton(btn) {
+  if (btn.dataset.flashing) return;
+  btn.dataset.flashing = '1';
+  const original = btn.innerHTML;
+  btn.innerHTML = `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg> Done!`;
+  btn.style.opacity = '0.75';
+  setTimeout(() => {
+    btn.innerHTML = original;
+    btn.style.opacity = '';
+    delete btn.dataset.flashing;
+  }, 1500);
+}
+
 function sendMessageToContentScript(action, data = {}) {
   chrome.tabs.query({ active: true, currentWindow: true }, async (tabs) => {
     if (tabs.length === 0) {
@@ -38,18 +51,20 @@ function sendMessageToContentScript(action, data = {}) {
   });
 }
 
-document.getElementById("checkAll").addEventListener("click", () => {
+document.getElementById("checkAll").addEventListener("click", (e) => {
   const startsWith = document.getElementById("startsWith").value.trim();
   const contains = document.getElementById("contains").value.trim();
   const doesNotInclude = document.getElementById("doesNotInclude").value.trim();
   sendMessageToContentScript("checkAll", { startsWith, contains, doesNotInclude });
+  flashButton(e.currentTarget);
 });
 
-document.getElementById("uncheckAll").addEventListener("click", () => {
+document.getElementById("uncheckAll").addEventListener("click", (e) => {
   const startsWith = document.getElementById("startsWith").value.trim();
   const contains = document.getElementById("contains").value.trim();
   const doesNotInclude = document.getElementById("doesNotInclude").value.trim();
   sendMessageToContentScript("uncheckAll", { startsWith, contains, doesNotInclude });
+  flashButton(e.currentTarget);
 });
 
 // To clear form fields
