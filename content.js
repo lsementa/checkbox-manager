@@ -1,3 +1,4 @@
+(function () {
 function getCheckboxLabel(el) {
     const ariaLabel = el.getAttribute('aria-label');
     if (ariaLabel) return ariaLabel.trim();
@@ -97,3 +98,4 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
 
     sendResponse({ status: 'success' });
 });
+})();
