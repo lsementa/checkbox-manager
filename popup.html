@@ -59,6 +59,29 @@
       font-weight: 600;
       color: var(--text);
       letter-spacing: -0.01em;
+      flex: 1;
+    }
+
+    #closeBtn {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 4px;
+      background: transparent;
+      border: none;
+      color: var(--muted);
+      border-radius: 4px;
+      cursor: pointer;
+      transition: background 0.15s, color 0.15s;
+    }
+
+    #closeBtn:hover {
+      background: var(--border);
+      color: var(--text);
+    }
+
+    #closeBtn:active {
+      opacity: 1;
     }
 
     .content {
@@ -189,6 +212,12 @@
       <path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"></path>
     </svg>
     <h3>Checkbox Manager</h3>
+    <button type="button" id="closeBtn" title="Close">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+        <line x1="18" y1="6" x2="6" y2="18"></line>
+        <line x1="6" y1="6" x2="18" y2="18"></line>
+      </svg>
+    </button>
   </div>
 
   <div class="content">

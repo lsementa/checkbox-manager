@@ -75,3 +75,7 @@ document.getElementById('clearButton').addEventListener('click', () => {
   }
 });
 
+document.getElementById('closeBtn').addEventListener('click', () => {
+  window.close();
+});
+
